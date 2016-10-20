@@ -19,6 +19,7 @@ def main():
         print("Push Request: ", msg)
     else:
         sys.exit('Error: Invalid action!')
+    print(get_documents('Action', 'push'))
 
 
 def store_json_message(msg):
@@ -47,8 +48,7 @@ def get_documents(key, value):
     # Get the posts of this database
     posts = db.posts
     # Try to push the json message into database
-    for post in posts.find({key: {'$regex': value}}):
-        print("Found matching document ", post)
+    return list(posts.find({key: {'$regex': value}}))
 
 
 # This function will parse in the command line arguments
