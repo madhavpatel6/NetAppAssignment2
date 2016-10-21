@@ -6,7 +6,7 @@ import json
 import pika
 import time 
 import RPi.GPIO as GPIO
-
+import pickle
 
 def main(): 
     # Set up Rabbitmq
@@ -24,30 +24,23 @@ def main():
 def on_request(ch, method, props, body):
     response = ''  # initialize response passed back to the bride
 
+    print('Message Recieved', body.decode('utf-8'))
     # Convert body to a json object
-    message = json.loads(body)
+    message = json.loads(body.decode('utf-8'))
 
-    if message['Action'] is 'push':
+    if message['Action'] == 'push':
         # Create a message that doesn't have the action key/value pair to push to db
-        msg = {k:v for k,v in message.interkeys() if not k== 'Action'}
-        response = handle_push_request(msg) 
-    elif message['Action'] is 'pull':
+        message.pop('Action', None)
+        response = handle_push_request(message) 
+    elif message['Action'] == 'pull':
         response = handle_pull_request(message)
     else:  # Should never reach this case
         response = {"Error": "Invalid Action"}
 
-    if type(response) is list: 
-        # Send every message in response 
-        for msg in response: 
-            ch.basic_publish(exchange='',
-                routing_key=str(props.reply_to),
-                properties=pika.BasicProperties(correlation_id = props.correlation_id),
-                body=json.dumps(msg))
-    else: 
-        ch.basic_publish(exchange='',
-            routing_key=str(props.reply_to),
-            properties=pika.BasicProperties(correlation_id = props.correlation_id),
-            body=json.dumps(response))    
+    ch.basic_publish(exchange='',
+        routing_key=str(props.reply_to),
+        properties=pika.BasicProperties(correlation_id = props.correlation_id),
+        body=pickle.dumps(response))    
 
 
 def store_json_message(msg):
@@ -72,26 +65,24 @@ def store_json_message(msg):
 
 def handle_pull_request(message):
     # Get responses for subjects if needed 
-    if 'Subject' in message: # Has criteria for message and subject 
+    if 'Message' in message: # Has criteria for message and subject 
         # get list of posts that fit criteria indicated
-        sub_posts = get_documents('Subject', message['Subject'])
-        msg_posts = get_documents('Message', message['Message'])
-        both_posts = set(sub_posts).instersection(msg_posts)
+        posts = get_documents('Subject', message['Subject'], 'Message', message['Message'])
     
         # return the messages that fit criteria or return no messages found
-        if len(both_posts) is 0: 
+        if len(posts) is 0: 
             return {'Status':'fail: no messages found with criteria'}
         else: 
-            return both_posts
+            return posts
     else: # only specifies message criteria
         # get list of posts that fit criteria indicated
-        msg_posts = get_documents('Message', message['Message'])
+        posts = get_documents('Subject', message['Subject'], 'Message', '.*')
         
         # return the messages that fit criteria or return no messages found
-        if len(msg_posts) is 0: 
+        if len(posts) is 0: 
             return {'Status': 'fail: no messages found with criteria'}
         else: 
-            return msg_posts
+            return posts
     # return the responses
     
     
@@ -104,8 +95,8 @@ def handle_push_request(message):
         return {'Status': 'success: message added to database'} # send success response
 
 
-def get_documents(key, value): 
-    print('Searching Key \'', key, '\' with regex value \'', value, '\'')
+def get_documents(key, value, key2, value2): 
+    print('Searching Key \'', key, '\' with regex value \'', value, '\' and Key \'', key2, '\' with regex value \'', value2, '\'')
     
     # Create a mongo client
     client = MongoClient()
@@ -117,15 +108,24 @@ def get_documents(key, value):
     posts = db.posts
 
     # Find messages that meet regular expression passed in
-    messages = posts.find({key: {'$regex': value}})
+    messages = list(posts.find({"$and": [{key: {'$regex': value}}, {key2:{'$regex': value2}}]}))
+    for m in messages:
+        del m['_id']
+    print(messages)
     return messages
         
 
-def mgsCounter(tot):
+def msgCounter(tot):
+    GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(4, GPIO.OUT)
+    GPIO.setup(17, GPIO.OUT)
+    GPIO.setup(27, GPIO.OUT)
+
     sleep_time = 1        # one second sleep time
-    ones = tot%10            # get the number of ones
-    tens = (tot%100-ones)/10    # get the number of tens 
-    hunds = (tot-tot%100)/100    # get the number of hundreds
+    ones = int(tot%10)            # get the number of ones
+    tens = int((tot%100-ones)/10)    # get the number of tens 
+    hunds = int((tot-tot%100)/100)    # get the number of hundreds
 
     # send the LED values so that it is turned off 
     GPIO.output(4, GPIO.LOW) 
@@ -137,19 +137,21 @@ def mgsCounter(tot):
         GPIO.output(4, GPIO.HIGH)    # turn red on
         time.sleep(sleep_time)        # delay for sleep time
         GPIO.output(4, GPIO.LOW)    # turn red off
+        time.sleep(sleep_time)        # delay for sleep time
 
     # for the number of tens 
     for digit in range(0, tens): 
         GPIO.output(17, GPIO.HIGH)    # turn green on
         time.sleep(sleep_time)        # delay for sleep time
         GPIO.output(17, GPIO.LOW)    # turn green off
+        time.sleep(sleep_time)        # delay for sleep time
 
     # for the number of ones 
     for digit in range(0, ones): 
         GPIO.output(27, GPIO.HIGH)    # turn blue on
         time.sleep(sleep_time)        # delay for sleep time
         GPIO.output(27, GPIO.LOW)    # turn blue off 
-
+        time.sleep(sleep_time)        # delay for sleep time
     
 
 if __name__ == "__main__":
