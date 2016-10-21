@@ -1,5 +1,6 @@
 import pika
 import json
+from bluetooth import *
 
 
 class BridgeClient(object):
@@ -37,17 +38,47 @@ class BridgeClient(object):
         # Return the response
         return self.response
 
+    def sendBluetooth(msg):
+        # Send message
+        sock = BluetoothSocket(RFCOMM)
+        port = 1
+        sock.connect(('B8:27:EB:CC:AD:05', port))
+        sock.send(msg)
+        sock.close()
+
+    def recvBlueooth():
+        # Establish a connection
+        server_sock = BluetoothSocket(RFCOMM)
+        port = 1
+        server_sock.bind("", port)
+
+        # Wait for a connection
+        server_sock.listen(1)
+        client_sock, address = server_sock.accept()
+        print("Accepted connection from ", address)
+
+        # Receive from bluetooth
+        data = client_sock.recv(1024)
+        print('Response:\n', data)
+
+        client_sock.close()
+        server_sock.close()
+        return data
+
 
 def main():
     # Create a connection to the repository
     bridge = BridgeClient()
     while True:
         # Receive from bluetooth
-
+        response = bridge.recvBlueooth()
+        print('Request from the mobile\n', response)
         # Call into the bridge class
-        print(bridge.call('Is that a problem?'))
-
+        recv_response = bridge.call(response)
+        print('Received response from repository\n', recv_response)
         # Receive a response from the repository and then send it back over bluetooth
+        bridge.sendBluetooth(recv_response)
+        print('Sent response to mobile')
 
 if __name__ == "__main__":
     main()

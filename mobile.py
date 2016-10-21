@@ -3,23 +3,61 @@ import json
 import time
 from pymongo import MongoClient
 import pymongo
+from bluetooth import *
 
 
 def main():
     # Parse command line arguments
     action, subject, text = parse_arguments(sys.argv)
     print("Action = " + action + " Subject = " + subject + " Text = " + text)
+
     if action == 'pull':
         raw, msg = construct_pull_object(subject, text)
         print("Pull Request: ", msg)
         store_json_message(raw)
+        sendBluetooth(msg)
+        response = recvBlueooth()
+        print('Response from repository\n', response)
+
     elif action == 'push':
         raw, msg = construct_push_object(subject, text)
-        store_json_message(raw)
         print("Push Request: ", msg)
+        store_json_message(raw)
+        sendBluetooth(msg)
+        response = recvBlueooth()
+        print('Response from repository\n', response)
     else:
         sys.exit('Error: Invalid action!')
     print(get_documents('Action', 'push'))
+
+
+def sendBluetooth(msg):
+    # Send message
+    sock = BluetoothSocket(RFCOMM)
+    port = 1
+    sock.connect(('B8:27:EB:F5:49:CC', port))
+    sock.send(msg)
+    sock.close()
+
+
+def recvBlueooth():
+    # Establish a connection
+    server_sock = BluetoothSocket(RFCOMM)
+    port = 1
+    server_sock.bind("", port)
+
+    # Wait for a connection
+    server_sock.listen(1)
+    client_sock, address = server_sock.accept()
+    print("Accepted connection from ", address)
+
+    # Receive from bluetooth
+    data = client_sock.recv(1024)
+    print('Response:\n', data)
+
+    client_sock.close()
+    server_sock.close()
+    return json.loads(data)
 
 
 def store_json_message(msg):
