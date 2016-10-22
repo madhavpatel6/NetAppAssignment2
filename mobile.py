@@ -62,14 +62,17 @@ def recvBlueooth():
 
     # Receive from bluetooth
     print('Response from repository\n')
+    count = 0
     while True:
         # Receive from the bridge
         data = client_sock.recv(1024)
+        count+=1
         print(json.loads(data.decode('utf-8')))
         # If the current data has a status key then break out of the while loop
         if 'Status' in json.loads(data.decode('utf-8')):
             break
     # Close the connection
+    print('Number of responses:', count)
     client_sock.close()
     server_sock.close()
 

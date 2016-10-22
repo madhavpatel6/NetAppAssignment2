@@ -1,0 +1,4 @@
+#! /usr/bin/perl
+for $i (1 .. 101) {
+  system('python3 mobile.py -a push -s testweather -m "it is not raining"')
+}
