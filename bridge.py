@@ -1,6 +1,7 @@
 import pika
 import json
 from bluetooth import *
+import pickle
 
 
 class BridgeClient(object):
@@ -23,7 +24,7 @@ class BridgeClient(object):
 
     def on_response(self, ch, method, props, body):
         # Get the message
-        self.response = body
+        self.response = pickle.loads(body)
 
     def call(self, n):
         self.response = None
@@ -38,7 +39,7 @@ class BridgeClient(object):
         # Return the response
         return self.response
 
-    def sendBluetooth(msg):
+    def sendBluetooth(self, msg):
         # Send message
         sock = BluetoothSocket(RFCOMM)
         port = 1
@@ -46,11 +47,11 @@ class BridgeClient(object):
         sock.send(msg)
         sock.close()
 
-    def recvBlueooth():
+    def recvBlueooth(self):
         # Establish a connection
         server_sock = BluetoothSocket(RFCOMM)
         port = 1
-        server_sock.bind("", port)
+        server_sock.bind(("", port))
 
         # Wait for a connection
         server_sock.listen(1)
@@ -70,8 +71,9 @@ def main():
     # Create a connection to the repository
     bridge = BridgeClient()
     while True:
+        print('Waiting for message')
         # Receive from bluetooth
-        response = bridge.recvBlueooth()
+        response = bridge.recvBlueooth().decode('utf-8')
         print('Request from the mobile\n', response)
         # Call into the bridge class
         recv_response = bridge.call(response)
