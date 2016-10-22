@@ -51,10 +51,11 @@ def recvBlueooth():
     print("Accepted connection from ", address)
 
     # Receive from bluetooth
+    print('Response from repository\n')
     while True:
         data = client_sock.recv(1024)
-        print('Response from repository\n', json.loads(data.decode('utf-8')))
-        if 'Status' in data:
+        print( json.loads(data.decode('utf-8')))
+        if 'Status' in json.loads(data.decode('utf-8')):
             break
 
     client_sock.close()
