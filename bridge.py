@@ -47,7 +47,7 @@ class BridgeClient(object):
 
         if type(msg) is list:
             for m in msg:
-                sock.send(msg)
+                sock.send(json.dumps(m))
         else:
             sock.send(msg)
         sock.close()
@@ -65,7 +65,6 @@ class BridgeClient(object):
 
         # Receive from bluetooth
         data = client_sock.recv(1024)
-        print('Response:\n', data)
 
         client_sock.close()
         server_sock.close()
