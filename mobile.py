@@ -71,7 +71,7 @@ def store_json_message(msg):
     try:
         print("Attempting to store ", msg, " into local database.")
         posts.insert_one(msg)
-        print("Successfully inserted message ")
+        print("Successfully inserted message into local database")
     except pymongo.errors.ServerSelectionTimeoutError:
         # Error
         sys.exit("Error: No instance of Mongod running")
