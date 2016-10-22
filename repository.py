@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from pymongo import MongoClient
 import pymongo
 import json
@@ -12,18 +10,23 @@ import pickle
 def main():
     # Set up Rabbitmq
     connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
+    # Establish a channel
     channel = connection.channel()
+    # Delete the local queue to clear it
     channel.queue_delete(queue='repository_queue')
+    # Declare the local
     channel.queue_declare(queue='repository_queue')
-
+    # Setup a consume for the local queue
     channel.basic_consume(on_request, queue='repository_queue')
 
     print(" [x] Waiting for Bridge Message")
+    # Start consuming
     channel.start_consuming()
 
 
+# Handles data available on the local repository queue
 def on_request(ch, method, props, body):
-    response = ''  # initialize response passed back to the bride
+    response = ''  # initialize response passed back to the bridge
 
     print('Message Recieved', body.decode('utf-8'))
     # Convert body to a json object
@@ -44,6 +47,7 @@ def on_request(ch, method, props, body):
         body=pickle.dumps(response))
 
 
+# Stores the contents of the message into the local database; returns the count of posts
 def store_json_message(msg):
     # Create a mono client
     client = MongoClient()
@@ -64,6 +68,7 @@ def store_json_message(msg):
     return db.posts.count()
 
 
+# This function handles a pull request from the mobile pi, returns a list of responses
 def handle_pull_request(message):
     # Get responses for subjects if needed
     if 'Message' in message:  # Has criteria for message and subject
@@ -74,6 +79,7 @@ def handle_pull_request(message):
         if len(posts) is 0:
             return [{'Status': 'fail: no messages found with criteria'}]
         else:
+            # append the status to the end of the list
             posts.append({'Status': 'success'})
             return posts
     else: # only specifies message criteria
@@ -84,6 +90,7 @@ def handle_pull_request(message):
         if len(posts) is 0:
             return [{'Status': 'fail: no messages found with criteria'}]
         else:
+            # append the status to the end of the list
             posts.append({'Status': 'success'})
             return posts
     # return the responses
@@ -118,13 +125,18 @@ def get_documents(key, value, key2, value2):
     return messages
 
 
+# This function implements a method to display the count onto the LED
 def msgCounter(tot):
+    # Disable the warnings
     GPIO.setwarnings(False)
+    # Setup the GPIO Mode
     GPIO.setmode(GPIO.BCM)
+    # Set the pins to outputs
     GPIO.setup(4, GPIO.OUT)
     GPIO.setup(17, GPIO.OUT)
     GPIO.setup(27, GPIO.OUT)
 
+    # Compute the number corresponding to each decimal place
     sleep_time = 1        # one second sleep time
     ones = int(tot%10)            # get the number of ones
     tens = int((tot%100-ones)/10)    # get the number of tens

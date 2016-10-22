@@ -3,8 +3,9 @@ import json
 from bluetooth import *
 import pickle
 
-
+# Bridge Client Class
 class BridgeClient(object):
+    # Initialize a RabbitMQ connection to the repository
     def __init__(self):
         crds = pika.PlainCredentials('guest', 'guest')
         # Create a connection to the repository
@@ -19,13 +20,16 @@ class BridgeClient(object):
         # Setup a callback function for the bridge queue
         self.channel.basic_consume(self.on_response, no_ack=True, queue=self.callback_queue)
 
+    # Close the connection to the repository
     def __del__(self):
         self.connection.close()
 
+    # Handle data available on local queue 'bridge_queue'
     def on_response(self, ch, method, props, body):
         # Get the message
         self.response = pickle.loads(body)
 
+    # Calls into the repository by putting a message into the repository_queue
     def call(self, n):
         self.response = None
         # Try to send the message to the repository via RabbitMQ
@@ -39,12 +43,14 @@ class BridgeClient(object):
         # Return the response
         return self.response
 
+    # Sends data to the mobile pi over bluetooth
     def sendBluetooth(self, msg):
-        # Send message
+        # establish a connection
         sock = BluetoothSocket(RFCOMM)
         port = 1
         sock.connect(('B8:27:EB:CC:AD:05', port))
 
+        # Iterate through the list of responses from the repository and send them to the mobile
         if type(msg) is list:
             for m in msg:
                 sock.send(json.dumps(m))
@@ -52,6 +58,7 @@ class BridgeClient(object):
             sock.send(msg)
         sock.close()
 
+    # Receives data from the mobile pi over bluetooth
     def recvBlueooth(self):
         # Establish a connection
         server_sock = BluetoothSocket(RFCOMM)
