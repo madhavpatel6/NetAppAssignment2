@@ -16,16 +16,15 @@ def main():
         print("Pull Request: ", msg)
         store_json_message(raw)
         sendBluetooth(msg)
-        response = recvBlueooth()
-        print('Response from repository\n', response)
+        recvBlueooth()
 
     elif action == 'push':
         raw, msg = construct_push_object(subject, text)
         print("Push Request: ", msg)
         store_json_message(raw)
         sendBluetooth(msg)
-        response = recvBlueooth()
-        print('Response from repository\n', response)
+        recvBlueooth()
+
     else:
         sys.exit('Error: Invalid action!')
 #    print(get_documents('Action', 'push'))
@@ -52,13 +51,14 @@ def recvBlueooth():
     print("Accepted connection from ", address)
 
     # Receive from bluetooth
-    data = client_sock.recv(1024)
-
+    while True:
+        data = client_sock.recv(1024)
+        print('Response from repository\n', json.loads(data.decode('utf-8')))
+        if 'Status' in data:
+            break
 
     client_sock.close()
     server_sock.close()
-    return json.loads(data.decode('utf-8'))
-
 
 def store_json_message(msg):
     # Create a mongo client

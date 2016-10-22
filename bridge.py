@@ -44,7 +44,12 @@ class BridgeClient(object):
         sock = BluetoothSocket(RFCOMM)
         port = 1
         sock.connect(('B8:27:EB:CC:AD:05', port))
-        sock.send(msg)
+
+        if type(msg) is list:
+            for m in msg:
+                sock.send(msg)
+        else:
+            sock.send(msg)
         sock.close()
 
     def recvBlueooth(self):
