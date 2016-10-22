@@ -28,7 +28,7 @@ def main():
         print('Response from repository\n', response)
     else:
         sys.exit('Error: Invalid action!')
-    print(get_documents('Action', 'push'))
+#    print(get_documents('Action', 'push'))
 
 
 def sendBluetooth(msg):
@@ -44,7 +44,7 @@ def recvBlueooth():
     # Establish a connection
     server_sock = BluetoothSocket(RFCOMM)
     port = 1
-    server_sock.bind("", port)
+    server_sock.bind(("", port))
 
     # Wait for a connection
     server_sock.listen(1)
@@ -53,11 +53,11 @@ def recvBlueooth():
 
     # Receive from bluetooth
     data = client_sock.recv(1024)
-    print('Response:\n', data)
+
 
     client_sock.close()
     server_sock.close()
-    return json.loads(data)
+    return json.loads(data.decode('utf-8'))
 
 
 def store_json_message(msg):
@@ -70,8 +70,8 @@ def store_json_message(msg):
     # Try to push the json message into database
     try:
         print("Attempting to store ", msg, " into local database.")
-        id = posts.insert_one(msg).inserted_id
-        print("Successfully inserted message ", id)
+        posts.insert_one(msg)
+        print("Successfully inserted message ")
     except pymongo.errors.ServerSelectionTimeoutError:
         # Error
         sys.exit("Error: No instance of Mongod running")
